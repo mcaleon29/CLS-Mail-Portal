@@ -128,6 +128,7 @@
       color: #6b7280;
     }
   </style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
 <body>
@@ -198,9 +199,26 @@
 </footer>
 
 <script>
-  function connectGmail() {
-    document.getElementById("status").innerHTML =
-      "Gmail connection setup will be activated after OAuth configuration.";
+ function connectGmail() {
+  const client = google.accounts.oauth2.initTokenClient({
+    client_id: "1038665915515-3nsa9hobqcnllc1ja4kahl87v2lqmdpj.apps.googleusercontent.com",
+    scope: "https://www.googleapis.com/auth/gmail.send",
+    callback: (response) => {
+      if (response.error) {
+        document.getElementById("status").innerHTML =
+          "❌ Gmail connection failed: " + response.error;
+        return;
+      }
+
+      window.gmailAccessToken = response.access_token;
+
+      document.getElementById("status").innerHTML =
+        "✅ Gmail connected successfully!";
+    },
+  });
+
+  client.requestAccessToken();
+}
 
     alert("Next step: We will connect this button to your Google OAuth Client.");
   }
