@@ -88,7 +88,8 @@
       margin: 15px 0;
     }
 
-    .gmail-section {
+    .gmail-section,
+    .compose-section {
       margin-top: 25px;
       background: white;
       padding: 30px;
@@ -115,6 +116,21 @@
       background: #c5221f;
     }
 
+    .send-btn {
+      background: #2563eb;
+      color: white;
+      margin-top: 15px;
+    }
+
+    .send-btn:hover {
+      background: #1d4ed8;
+    }
+
+    .send-btn:disabled {
+      background: #9ca3af;
+      cursor: not-allowed;
+    }
+
     .status {
       margin-top: 15px;
       padding: 12px;
@@ -123,11 +139,72 @@
       color: #92400e;
     }
 
+    .form-group {
+      margin-top: 18px;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 7px;
+      font-weight: bold;
+      color: #17365d;
+    }
+
+    .form-group input,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 7px;
+      font-size: 15px;
+      outline: none;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+      border-color: #2563eb;
+    }
+
+    .form-group textarea {
+      min-height: 180px;
+      resize: vertical;
+    }
+
+    .compose-status {
+      display: none;
+      margin-top: 15px;
+      padding: 12px;
+      border-radius: 6px;
+      background: #f3f4f6;
+    }
+
     footer {
       text-align: center;
       margin-top: 40px;
       padding: 20px;
       color: #6b7280;
+    }
+
+    @media (max-width: 600px) {
+
+      header {
+        padding: 15px 20px;
+      }
+
+      .logo {
+        font-size: 20px;
+      }
+
+      .container {
+        padding: 20px 12px;
+      }
+
+      .welcome,
+      .gmail-section,
+      .compose-section {
+        padding: 20px;
+      }
+
     }
   </style>
 </head>
@@ -176,6 +253,9 @@
 
   </div>
 
+
+  <!-- GMAIL CONNECTION -->
+
   <div class="gmail-section">
 
     <h2>Connect Gmail Account</h2>
@@ -195,11 +275,78 @@
 
   </div>
 
+
+  <!-- COMPOSE EMAIL -->
+
+  <div class="compose-section">
+
+    <h2>📧 Compose Email</h2>
+
+    <p style="margin-top:10px; color:#6b7280;">
+      Send an email directly using your connected Gmail account.
+    </p>
+
+    <div class="form-group">
+
+      <label for="toEmail">To</label>
+
+      <input
+        type="email"
+        id="toEmail"
+        placeholder="recipient@example.com"
+      >
+
+    </div>
+
+
+    <div class="form-group">
+
+      <label for="subject">Subject</label>
+
+      <input
+        type="text"
+        id="subject"
+        placeholder="Enter email subject"
+      >
+
+    </div>
+
+
+    <div class="form-group">
+
+      <label for="message">Message</label>
+
+      <textarea
+        id="message"
+        placeholder="Write your message here..."
+      ></textarea>
+
+    </div>
+
+
+    <button
+      class="send-btn"
+      id="sendButton"
+      onclick="sendEmail()"
+    >
+      📤 Send Email
+    </button>
+
+
+    <div
+      class="compose-status"
+      id="composeStatus"
+    ></div>
+
+  </div>
+
 </div>
+
 
 <footer>
   CLS Mail Portal © 2026
 </footer>
+
 
 <script>
 
@@ -208,134 +355,595 @@ const CLIENT_ID =
 
 let gmailAccessToken = null;
 
+
+/* =========================
+   UPDATE CONNECTION STATUS
+========================= */
+
 function updateStatus(message) {
-  document.getElementById("status").textContent = message;
+
+  document
+    .getElementById("status")
+    .textContent = message;
+
 }
+
+
+/* =========================
+   COMPOSE STATUS
+========================= */
+
+function updateComposeStatus(message, type = "info") {
+
+  const status =
+    document.getElementById("composeStatus");
+
+  status.style.display = "block";
+
+  status.textContent = message;
+
+  if (type === "success") {
+
+    status.style.background = "#dcfce7";
+    status.style.color = "#166534";
+
+  }
+
+  else if (type === "error") {
+
+    status.style.background = "#fee2e2";
+    status.style.color = "#991b1b";
+
+  }
+
+  else {
+
+    status.style.background = "#dbeafe";
+    status.style.color = "#1e40af";
+
+  }
+
+}
+
+
+/* =========================
+   GET GMAIL COUNT
+========================= */
 
 async function getGmailCount(query) {
 
   const response = await fetch(
+
     "https://gmail.googleapis.com/gmail/v1/users/me/messages?q=" +
     encodeURIComponent(query),
+
     {
+
       headers: {
-        Authorization: "Bearer " + gmailAccessToken
+
+        Authorization:
+          "Bearer " + gmailAccessToken
+
       }
+
     }
+
   );
 
-  const data = await response.json();
+
+  const data =
+    await response.json();
+
 
   if (!response.ok) {
+
     throw new Error(
-      data.error?.message || "Unable to load Gmail messages."
+
+      data.error?.message ||
+      "Unable to load Gmail messages."
+
     );
+
   }
 
+
   return data.resultSizeEstimate || 0;
+
 }
+
+
+/* =========================
+   LOAD GMAIL COUNTS
+========================= */
 
 async function loadGmailCounts() {
 
   try {
 
-    updateStatus("📥 Loading Gmail messages...");
+    updateStatus(
+      "📥 Loading Gmail messages..."
+    );
 
-    const inbox = await getGmailCount("in:inbox");
-    document.getElementById("inboxCount").textContent = inbox;
 
-    const sent = await getGmailCount("in:sent");
-    document.getElementById("sentCount").textContent = sent;
+    const inbox =
+      await getGmailCount("in:inbox");
 
-    const important = await getGmailCount("is:important");
-    document.getElementById("importantCount").textContent = important;
+    document
+      .getElementById("inboxCount")
+      .textContent = inbox;
 
-    const unread = await getGmailCount("is:unread");
-    document.getElementById("unreadCount").textContent = unread;
 
-    updateStatus("✅ Gmail connected successfully! Messages loaded.");
+    const sent =
+      await getGmailCount("in:sent");
 
-  } catch (error) {
+    document
+      .getElementById("sentCount")
+      .textContent = sent;
+
+
+    const important =
+      await getGmailCount("is:important");
+
+    document
+      .getElementById("importantCount")
+      .textContent = important;
+
+
+    const unread =
+      await getGmailCount("is:unread");
+
+    document
+      .getElementById("unreadCount")
+      .textContent = unread;
+
 
     updateStatus(
-      "❌ Unable to load Gmail messages: " + error.message
+      "✅ Gmail connected successfully! Messages loaded."
+    );
+
+
+  }
+
+  catch (error) {
+
+    updateStatus(
+
+      "❌ Unable to load Gmail messages: " +
+      error.message
+
     );
 
   }
 
 }
 
+
+/* =========================
+   CONNECT GMAIL
+========================= */
+
 function connectGmail() {
 
-  updateStatus("Connecting to Gmail...");
+  updateStatus(
+    "Connecting to Gmail..."
+  );
+
 
   if (
+
     typeof google === "undefined" ||
+
     !google.accounts ||
+
     !google.accounts.oauth2
+
   ) {
 
     updateStatus(
+
       "❌ Google authentication is still loading. Please wait a few seconds and try again."
+
     );
 
     return;
+
   }
 
+
   const client =
+
     google.accounts.oauth2.initTokenClient({
 
-      client_id: CLIENT_ID,
+      client_id:
+        CLIENT_ID,
+
 
       scope:
-        "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send",
 
-      callback: async (response) => {
+        "https://www.googleapis.com/auth/gmail.readonly " +
 
-        if (response.error) {
+        "https://www.googleapis.com/auth/gmail.send",
+
+
+      callback:
+
+        async (response) => {
+
+
+          if (response.error) {
+
+            updateStatus(
+
+              "❌ Gmail connection failed: " +
+              response.error
+
+            );
+
+            return;
+
+          }
+
+
+          gmailAccessToken =
+            response.access_token;
+
+
+          document
+            .getElementById("userStatus")
+            .textContent =
+            "Gmail Connected";
+
 
           updateStatus(
-            "❌ Gmail connection failed: " +
-            response.error
+
+            "✅ Gmail connected successfully! Loading messages..."
+
           );
 
-          return;
+
+          await loadGmailCounts();
+
+        },
+
+
+      error_callback:
+        (error) => {
+
+
+          updateStatus(
+
+            "❌ Connection error: " +
+
+            (error.type ||
+            "Unknown error")
+
+          );
+
         }
-
-        gmailAccessToken = response.access_token;
-
-        document
-          .getElementById("userStatus")
-          .textContent = "Gmail Connected";
-
-        updateStatus(
-          "✅ Gmail connected successfully! Loading messages..."
-        );
-
-        await loadGmailCounts();
-
-      },
-
-      error_callback: (error) => {
-
-        updateStatus(
-          "❌ Connection error: " +
-          (error.type || "Unknown error")
-        );
-
-      }
 
     });
 
+
   client.requestAccessToken({
-    prompt: "consent"
+
+    prompt:
+      "consent"
+
   });
 
 }
 
+
+/* =========================
+   BASE64 URL ENCODE
+========================= */
+
+function base64UrlEncode(str) {
+
+  const bytes =
+    new TextEncoder()
+      .encode(str);
+
+  let binary = "";
+
+  bytes.forEach(
+
+    (byte) => {
+
+      binary +=
+        String.fromCharCode(byte);
+
+    }
+
+  );
+
+
+  return btoa(binary)
+
+    .replace(/\+/g, "-")
+
+    .replace(/\//g, "_")
+
+    .replace(/=+$/, "");
+
+}
+
+
+/* =========================
+   SEND EMAIL
+========================= */
+
+async function sendEmail() {
+
+
+  if (!gmailAccessToken) {
+
+    updateComposeStatus(
+
+      "❌ Please connect your Gmail account first.",
+
+      "error"
+
+    );
+
+    return;
+
+  }
+
+
+  const to =
+    document
+      .getElementById("toEmail")
+      .value
+      .trim();
+
+
+  const subject =
+    document
+      .getElementById("subject")
+      .value
+      .trim();
+
+
+  const message =
+    document
+      .getElementById("message")
+      .value
+      .trim();
+
+
+  if (!to) {
+
+    updateComposeStatus(
+
+      "❌ Please enter the recipient email address.",
+
+      "error"
+
+    );
+
+    return;
+
+  }
+
+
+  if (!subject) {
+
+    updateComposeStatus(
+
+      "❌ Please enter the email subject.",
+
+      "error"
+
+    );
+
+    return;
+
+  }
+
+
+  if (!message) {
+
+    updateComposeStatus(
+
+      "❌ Please enter your message.",
+
+      "error"
+
+    );
+
+    return;
+
+  }
+
+
+  const sendButton =
+    document
+      .getElementById("sendButton");
+
+
+  sendButton.disabled =
+    true;
+
+
+  sendButton.textContent =
+    "Sending...";
+
+
+  updateComposeStatus(
+
+    "📤 Sending email...",
+
+    "info"
+
+  );
+
+
+  try {
+
+
+    const emailContent =
+
+      "To: " + to + "\r\n" +
+
+      "Subject: " + subject + "\r\n" +
+
+      "MIME-Version: 1.0\r\n" +
+
+      "Content-Type: text/plain; charset=UTF-8\r\n" +
+
+      "Content-Transfer-Encoding: 8bit\r\n" +
+
+      "\r\n" +
+
+      message;
+
+
+    const rawEmail =
+      base64UrlEncode(
+        emailContent
+      );
+
+
+    const response =
+      await fetch(
+
+        "https://gmail.googleapis.com/gmail/v1/users/me/messages/send",
+
+        {
+
+          method:
+            "POST",
+
+
+          headers:
+
+            {
+
+              Authorization:
+
+                "Bearer " +
+                gmailAccessToken,
+
+
+              "Content-Type":
+                "application/json"
+
+            },
+
+
+          body:
+
+            JSON.stringify({
+
+              raw:
+                rawEmail
+
+            })
+
+        }
+
+      );
+
+
+    const data =
+      await response.json();
+
+
+    if (!response.ok) {
+
+      throw new Error(
+
+        data.error?.message ||
+
+        "Unable to send email."
+
+      );
+
+    }
+
+
+    updateComposeStatus(
+
+      "✅ Email sent successfully!",
+
+      "success"
+
+    );
+
+
+    document
+      .getElementById("toEmail")
+      .value = "";
+
+
+    document
+      .getElementById("subject")
+      .value = "";
+
+
+    document
+      .getElementById("message")
+      .value = "";
+
+
+    const sent =
+      await getGmailCount(
+        "in:sent"
+      );
+
+
+    document
+      .getElementById("sentCount")
+      .textContent =
+      sent;
+
+
+  }
+
+  catch (error) {
+
+
+    updateComposeStatus(
+
+      "❌ Failed to send email: " +
+
+      error.message,
+
+      "error"
+
+    );
+
+  }
+
+  finally {
+
+
+    sendButton.disabled =
+      false;
+
+
+    sendButton.innerHTML =
+      "📤 Send Email";
+
+  }
+
+}
+
+
+/* =========================
+   CONNECT BUTTON
+========================= */
+
 document
   .getElementById("gmailButton")
-  .addEventListener("click", connectGmail);
+  .addEventListener(
+
+    "click",
+
+    connectGmail
+
+  );
 
 </script>
 
