@@ -6,6 +6,8 @@
 
   <title>CLS Mail Portal</title>
 
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+
   <style>
     * {
       box-sizing: border-box;
@@ -128,7 +130,6 @@
       color: #6b7280;
     }
   </style>
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
 <body>
@@ -180,10 +181,10 @@
 
     <p style="margin-top:10px; color:#6b7280;">
       Connect your Gmail account to allow CLS Mail Portal
-      to read and send authorized emails.
+      to send authorized emails.
     </p>
 
-    <button class="gmail-btn" onclick="connectGmail()">
+    <button class="gmail-btn" id="gmailButton">
       Connect with Gmail
     </button>
 
@@ -199,26 +200,71 @@
 </footer>
 
 <script>
- function connectGmail() {
-  const client = google.accounts.oauth2.initTokenClient({
-    client_id: "1038665915515-3nsa9hobqcnllc1ja4kahl87v2lqmdpj.apps.googleusercontent.com",
-    scope: "https://www.googleapis.com/auth/gmail.send",
-    callback: (response) => {
-      if (response.error) {
-        document.getElementById("status").innerHTML =
-          "❌ Gmail connection failed: " + response.error;
-        return;
+  const CLIENT_ID =
+    "1038665915515-3nsa9hobqcnllc1ja4kahl87v2lqmdpj.apps.googleusercontent.com";
+
+  function updateStatus(message) {
+    document.getElementById("status").textContent = message;
+  }
+
+  function connectGmail() {
+
+    updateStatus("Connecting to Gmail...");
+
+    if (
+      typeof google === "undefined" ||
+      !google.accounts ||
+      !google.accounts.oauth2
+    ) {
+      updateStatus(
+        "❌ Google authentication is still loading. Please wait a few seconds and try again."
+      );
+      return;
+    }
+
+    const client = google.accounts.oauth2.initTokenClient({
+
+      client_id: CLIENT_ID,
+
+      scope:
+        "https://www.googleapis.com/auth/gmail.send",
+
+      callback: (response) => {
+
+        if (response.error) {
+          updateStatus(
+            "❌ Gmail connection failed: " + response.error
+          );
+          return;
+        }
+
+        window.gmailAccessToken = response.access_token;
+
+        document.getElementById("userStatus").textContent =
+          "Gmail Connected";
+
+        updateStatus(
+          "✅ Gmail connected successfully!"
+        );
+      },
+
+      error_callback: (error) => {
+        updateStatus(
+          "❌ Connection error: " +
+          (error.type || "Unknown error")
+        );
       }
 
-      window.gmailAccessToken = response.access_token;
+    });
 
-      document.getElementById("status").innerHTML =
-        "✅ Gmail connected successfully!";
-    },
-  });
+    client.requestAccessToken({
+      prompt: "consent"
+    });
+  }
 
-    client.requestAccessToken();
-}
+  document
+    .getElementById("gmailButton")
+    .addEventListener("click", connectGmail);
 </script>
 
 </body>
