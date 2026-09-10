@@ -15,7 +15,7 @@ button,input,textarea{font:inherit}button{cursor:pointer;border:0}
 .search button{position:absolute;right:3px;top:3px;height:32px;width:38px;background:transparent}
 .user{margin-left:auto;font-size:13px;white-space:nowrap}
 .dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:6px}.dot.ok{background:#22c55e}
-.layout{height:calc(100vh - 60px);display:grid;grid-template-columns:220px 400px minmax(0,1fr)}
+.layout{height:calc(100vh - 60px);display:grid;grid-template-columns:220px 400px minmax(0,1fr);min-height:0;overflow:hidden}
 .sidebar{background:white;border-right:1px solid #dfe3e8;padding:14px 10px;overflow:auto}
 .new-btn{width:100%;background:#2563eb;color:white;padding:12px;border-radius:7px;font-weight:700;margin-bottom:14px}
 .new-btn:hover{background:#1d4ed8}
@@ -23,10 +23,10 @@ button,input,textarea{font:inherit}button{cursor:pointer;border:0}
 .nav:hover,.nav.active{background:#e8f1ff;color:#17365d;font-weight:600}.nav .num{margin-left:auto;font-size:12px;color:#6b7280}
 .connect{margin-top:20px;padding:12px;border:1px solid #dbe2ea;border-radius:8px;background:#f8fafc;font-size:12px;color:#6b7280}
 .gmail-btn{width:100%;margin-top:9px;padding:9px;border-radius:6px;background:#ea4335;color:white;font-weight:600}
-.listpane{background:white;border-right:1px solid #dfe3e8;display:flex;flex-direction:column;min-width:0}
+.listpane{background:white;border-right:1px solid #dfe3e8;display:flex;flex-direction:column;min-width:0;min-height:0;height:100%;overflow:hidden}
 .listhead{height:58px;border-bottom:1px solid #e3e7eb;display:flex;align-items:center;padding:0 15px;gap:10px}
 .listhead h2{font-size:18px}.refresh{margin-left:auto;background:transparent;padding:7px;font-size:20px;color:#4b5563}
-.messages{overflow-y:auto;overflow-x:hidden;flex:1;min-height:0;overscroll-behavior:contain}
+.messages{overflow-y:scroll;overflow-x:hidden;flex:1 1 auto;min-height:0;height:0;overscroll-behavior:contain}
 .load-footer{padding:8px 12px;border-top:1px solid #e3e7eb;background:#fff}.load-more{display:block;width:100%;padding:9px;border:1px solid #d7dee8;border-radius:7px;background:#f8fafc;color:#17365d;font-weight:600;cursor:pointer}.load-more:hover{background:#eef4ff}.load-more:disabled{opacity:.6;cursor:wait}
 .mail{padding:12px 14px;border-bottom:1px solid #edf0f3;cursor:pointer}
 .mail:hover{background:#f6f9fc}.mail.selected{background:#eaf2ff;border-left:3px solid #2563eb;padding-left:11px}
