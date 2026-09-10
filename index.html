@@ -56,7 +56,35 @@ button,input,textarea{font:inherit}button{cursor:pointer;border:0}
 .send-btn{background:#2563eb;color:white;padding:10px 18px;border-radius:6px;font-weight:700}.send-btn:disabled{background:#9ca3af}
 .compose-status{font-size:13px;color:#2563eb}
 @media(max-width:900px){.layout{grid-template-columns:190px 330px minmax(350px,1fr)}}
-@media(max-width:700px){body{overflow:auto}.layout{height:auto;min-width:0;grid-template-columns:1fr}.sidebar{display:none}.listpane{height:45vh}.preview{min-height:55vh}.user{display:none}}
+
+/* Outlook-inspired enhancements */
+.topbar{height:54px;background:#0f5ea8;padding:0 14px;gap:12px}
+.logo{font-size:18px;min-width:180px}
+.search{max-width:560px}.search input{height:34px;border-radius:3px;background:#fff}
+.layout{height:calc(100vh - 54px);grid-template-columns:205px 430px minmax(0,1fr)}
+.sidebar{padding:10px 8px;background:#f7f9fc}
+.new-btn{background:#0f6cbd;border-radius:3px;padding:10px;margin-bottom:10px}
+.nav{border-radius:2px;padding:8px 10px;margin:1px 0}
+.nav.active{background:#dceeff;color:#0b4f8a}
+.connect{margin-top:14px}
+.listpane{grid-template-rows:54px minmax(0,1fr) auto}
+.listhead{height:54px;padding:0 12px;background:#fff}
+.listhead h2{font-size:17px}
+.messages{background:#fff}
+.mail{padding:9px 11px 10px;border-bottom:1px solid #e6e9ed;min-height:76px}
+.mail:hover{background:#f3f8fd}.mail.selected{background:#dfeeff;border-left:3px solid #0f6cbd;padding-left:8px}
+.from{font-size:13px}.subject{font-size:12.5px;font-weight:600}.snippet{font-size:11.5px}
+.group-title{position:sticky;top:0;z-index:1;background:#eef2f6;border-bottom:1px solid #d9dee5;padding:5px 11px;font-size:11px;font-weight:700;color:#4b5563}
+.attachment-mark{font-size:12px;margin-left:2px;color:#5b6572}.mail.unread{background:#fff}
+.preview{background:#f1f3f5}
+.previewhead{padding:15px 20px 12px}.previewhead h1{font-size:19px;margin-bottom:8px}
+.actions{padding:7px 20px}.actions button{font-size:13px;padding:6px 9px}
+.attachments{padding:10px 20px 8px;background:#fff;border-bottom:1px solid #e3e7eb}
+.attachment{background:#f5f7fa;border:1px solid #cfd6df;border-radius:2px;padding:8px 10px;margin:3px 5px 3px 0;text-align:left}
+.body{margin:12px 14px;padding:18px;min-height:0;border-radius:3px;background:#fff}
+.mail-tools{display:flex;align-items:center;gap:6px;margin-left:auto}.count-pill{font-size:11px;color:#6b7280}
+@media(max-width:900px){.layout{grid-template-columns:190px 360px minmax(350px,1fr)}}
+@media(max-width:700px){body{overflow:auto}.layout{height:auto;min-width:0;grid-template-columns:1fr}.sidebar{display:none}.listpane{height:48vh}.preview{min-height:52vh}.user{display:none}}
 </style>
 </head>
 <body>
@@ -85,7 +113,7 @@ button,input,textarea{font:inherit}button{cursor:pointer;border:0}
   </aside>
 
   <section class="listpane">
-    <div class="listhead"><h2 id="folderTitle">Inbox</h2><span id="listTotal" style="font-size:12px;color:#6b7280"></span><button class="refresh" onclick="loadCurrentFolder()" title="Refresh">↻</button></div>
+    <div class="listhead"><h2 id="folderTitle">Inbox</h2><span id="listTotal" style="font-size:12px;color:#6b7280"></span><div class="mail-tools"><span class="count-pill">Sort: Date</span><button class="refresh" onclick="loadCurrentFolder()" title="Refresh">↻</button></div></div>
     <div class="messages" id="mailList"><div class="empty">Connect Gmail to load your messages.</div></div><div class="load-footer"><button class="load-more" id="loadMoreBtn" onclick="loadCurrentFolder(false)">⬇ Load next 20 emails</button></div>
   </section>
 
@@ -130,6 +158,7 @@ let folderIds = [];
 let nextPageToken = "";
 let loadingMore = false;
 let allIdsLoaded = false;
+let attachmentIdSet = new Set();
 const PAGE_SIZE = 20;
 const META_BATCH = 5;
 
@@ -313,6 +342,7 @@ async function loadCurrentFolder(reset=true) {
 
   if (reset) {
     currentMessages = [];
+    attachmentIdSet = new Set();
     folderIds = [];
     nextPageToken = "";
     allIdsLoaded = false;
@@ -368,6 +398,7 @@ async function loadCurrentFolder(reset=true) {
       updateStatus("📥 Loaded " + currentMessages.length + " messages. Scroll down for more.");
     }
 
+    await markAttachmentIdsForPage(idsToFetch);
     renderMailList();
   } catch(e) {
     renderMailList();
@@ -385,37 +416,65 @@ async function loadMoreOnScroll() {
   }
 }
 
+function groupLabel(ms){
+  const d=new Date(Number(ms||0)); if(!ms) return "";
+  const now=new Date();
+  const start=new Date(now.getFullYear(),now.getMonth(),now.getDate());
+  const day=new Date(d.getFullYear(),d.getMonth(),d.getDate());
+  const diff=Math.round((start-day)/86400000);
+  if(diff===0) return "Today";
+  if(diff===1) return "Yesterday";
+  if(diff<7) return d.toLocaleDateString([], {weekday:"long"});
+  if(diff<14) return "Last Week";
+  return d.toLocaleDateString([], {month:"long",day:"numeric",year:"numeric"});
+}
+
+async function markAttachmentIdsForPage(ids){
+  // Cheap Gmail search: returns IDs only, so we do not download message bodies.
+  try{
+    const q=queryForFolder(currentFolder)+" has:attachment";
+    let url="https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=100&q="+encodeURIComponent(q);
+    const data=await gmailFetch(url);
+    (data.messages||[]).forEach(x=>attachmentIdSet.add(x.id));
+  }catch(e){ /* attachment indicator is optional */ }
+}
+
 function renderMailList() {
-  const term = $("searchBox").value.trim().toLowerCase();
-  const items = currentMessages.filter(m => {
-    const h = m.payload?.headers || [];
-    const text = [headerValue(h,"From"),headerValue(h,"To"),headerValue(h,"Subject")].join(" ").toLowerCase();
+  const term=$("searchBox").value.trim().toLowerCase();
+  const items=currentMessages.filter(m=>{
+    const h=m.payload?.headers||[];
+    const text=[headerValue(h,"From"),headerValue(h,"To"),headerValue(h,"Subject")].join(" ").toLowerCase();
     return !term || text.includes(term);
   });
-  if (!items.length) {
-    $("mailList").innerHTML = '<div class="empty">No emails found.</div>';
-    $("listTotal").textContent = currentMessages.length ? currentMessages.length + " loaded" : "";
+  if(!items.length){
+    $("mailList").innerHTML='<div class="empty">No emails found.</div>';
+    $("listTotal").textContent=currentMessages.length?currentMessages.length+" loaded":"";
     return;
   }
-  $("listTotal").textContent = currentMessages.length + (allIdsLoaded ? " loaded" : " loaded • more available");
-  let html = items.map(m => {
+  $("listTotal").textContent=currentMessages.length+(allIdsLoaded?" loaded":" loaded • more available");
+  let lastGroup="";
+  let html="";
+  for(const m of items){
     const h=m.payload?.headers||[];
     const from=headerValue(h,"From")||"Unknown sender";
     const subject=headerValue(h,"Subject")||"(No subject)";
     const snippet=(m.snippet||"").replace(/\s+/g," ").slice(0,110);
     const unread=m.labelIds?.includes("UNREAD");
     const important=m.labelIds?.includes("IMPORTANT");
-    return `<div class="mail ${unread?"unread":""} ${currentMessage?.id===m.id?"selected":""}" onclick="openMessage('${m.id}')">
-      <div class="row"><span class="${important?"important":"star"}">${important?"★":"☆"}</span><span class="from">${escapeHtml(from)}</span><span class="date">${shortDate(m.internalDate)}</span></div>
+    const group=groupLabel(m.internalDate);
+    if(group!==lastGroup){html+=`<div class="group-title">${escapeHtml(group)}</div>`;lastGroup=group;}
+    const paper=attachmentIdSet.has(m.id)||m._hasAttachment;
+    html+=`<div class="mail ${unread?"unread":""} ${currentMessage?.id===m.id?"selected":""}" onclick="openMessage('${m.id}')">
+      <div class="row"><span class="${important?"important":"star"}">${important?"★":"☆"}</span><span class="from">${escapeHtml(from)}</span>${paper?'<span class="attachment-mark" title="Has attachment">📎</span>':''}<span class="date">${shortDate(m.internalDate)}</span></div>
       <div class="subject">${escapeHtml(subject)}</div>
       <div class="snippet">${escapeHtml(snippet)}</div>
     </div>`;
-  }).join("");
-  $("mailList").innerHTML = html;
-  const btn = $("loadMoreBtn");
-  if (btn) {
-    btn.disabled = loadingMore || allIdsLoaded;
-    btn.textContent = allIdsLoaded ? "✓ All available emails loaded" : (loadingMore ? "Loading…" : "⬇ Load next 20 emails");
+  }
+  $("mailList").innerHTML=html;
+  const btn=$("loadMoreBtn");
+  if(btn){
+    btn.disabled=loadingMore||allIdsLoaded;
+    btn.textContent=allIdsLoaded?"✓ All available emails loaded":(loadingMore?"Loading…":"⬇ Load next 20 emails");
   }
 }
 
@@ -463,6 +522,9 @@ async function openMessage(id) {
     }
 
     const atts=getAttachments(currentMessage.payload);
+    currentMessage._hasAttachment = atts.length > 0;
+    const listIdx=currentMessages.findIndex(x=>x.id===currentMessage.id);
+    if(listIdx>=0) currentMessages[listIdx]._hasAttachment = atts.length > 0;
     $("attachments").innerHTML=atts.length
       ? "<strong>Attachments:</strong> "+atts.map(a=>`<button class="attachment" onclick="downloadAttachment('${currentMessage.id}','${a.attachmentId}','${escapeHtml(a.filename).replace(/'/g,"&#039;")}')">📎 ${escapeHtml(a.filename)}</button>`).join("")
       : "";
