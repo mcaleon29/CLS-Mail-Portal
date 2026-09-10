@@ -84,7 +84,7 @@ button,input,textarea{font:inherit}button{cursor:pointer;border:0}
   </aside>
 
   <section class="listpane">
-    <div class="listhead"><h2 id="folderTitle">Inbox</h2><button class="refresh" onclick="loadCurrentFolder()" title="Refresh">↻</button></div>
+    <div class="listhead"><h2 id="folderTitle">Inbox</h2><span id="listTotal" style="font-size:12px;color:#6b7280"></span><button class="refresh" onclick="loadCurrentFolder()" title="Refresh">↻</button></div>
     <div class="messages" id="mailList"><div class="empty">Connect Gmail to load your messages.</div></div>
   </section>
 
@@ -272,17 +272,44 @@ async function loadCurrentFolder() {
     $("mailList").innerHTML = '<div class="empty">Connect Gmail first.</div>';
     return;
   }
-  $("mailList").innerHTML = '<div class="empty">📥 Loading messages...</div>';
-  updateStatus("Loading " + $("folderTitle").textContent + "...");
+
+  $("mailList").innerHTML = '<div class="empty">📥 Loading all messages...</div>';
+  updateStatus("Loading all " + $("folderTitle").textContent + "...");
+
   try {
-    const data = await gmailFetch(
-      "https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=50&q=" +
-      encodeURIComponent(queryForFolder(currentFolder))
-    );
-    const ids = data.messages || [];
-    currentMessages = await Promise.all(ids.map(x => getMessage(x.id)));
+    const ids = [];
+    let pageToken = "";
+
+    // Gmail can return pages. Keep requesting pages so the list can scroll
+    // through the complete folder instead of stopping at the first 50.
+    do {
+      let url =
+        "https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=100&q=" +
+        encodeURIComponent(queryForFolder(currentFolder));
+      if (pageToken) url += "&pageToken=" + encodeURIComponent(pageToken);
+
+      const data = await gmailFetch(url);
+      if (data.messages) ids.push(...data.messages);
+      pageToken = data.nextPageToken || "";
+
+      $("mailList").innerHTML =
+        '<div class="empty">📥 Loading messages... ' + ids.length + ' found</div>';
+    } while (pageToken);
+
+    // Load the full content for every message returned by Gmail.
+    currentMessages = [];
+    const batchSize = 25;
+    for (let i = 0; i < ids.length; i += batchSize) {
+      const batch = ids.slice(i, i + batchSize);
+      const results = await Promise.all(batch.map(x => getMessage(x.id)));
+      currentMessages.push(...results);
+      $("mailList").innerHTML =
+        '<div class="empty">📥 Opening messages... ' +
+        currentMessages.length + ' / ' + ids.length + '</div>';
+    }
+
     renderMailList();
-    updateStatus("✅ Gmail connected successfully! Messages loaded.");
+    updateStatus("✅ Gmail connected successfully! " + currentMessages.length + " messages loaded.");
   } catch(e) {
     $("mailList").innerHTML = '<div class="empty">❌ ' + escapeHtml(e.message) + '</div>';
     updateStatus("❌ Unable to load messages: " + e.message);
@@ -300,7 +327,7 @@ function renderMailList() {
     $("mailList").innerHTML = '<div class="empty">No emails found.</div>';
     return;
   }
-  $("mailList").innerHTML = items.map(m => {
+  $("listTotal").textContent = items.length ? items.length + " shown" : "";\n  $("mailList").innerHTML = items.map(m => {
     const h=m.payload?.headers||[];
     const from=headerValue(h,"From")||"Unknown sender";
     const subject=headerValue(h,"Subject")||"(No subject)";
