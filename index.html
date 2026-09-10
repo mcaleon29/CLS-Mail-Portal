@@ -407,12 +407,15 @@ async function openMessage(id) {
   $("attachments").innerHTML="";
 
   try {
-    // Full message is fetched ONLY when the user opens it. This greatly reduces quota usage.
-    if (!message.payload || message.payload.mimeType === undefined) {
-      message = await getMessage(id);
+    // Metadata responses contain headers/snippet but NOT the actual readable body.
+    // Fetch the full Gmail message only once, when the user opens it.
+    if (!message._fullLoaded) {
+      const fullMessage = await getMessage(id);
+      fullMessage._fullLoaded = true;
+      message = fullMessage;
       const idx = currentMessages.findIndex(m => m.id === id);
-      if (idx >= 0) currentMessages[idx] = message;
-      currentMessage = message;
+      if (idx >= 0) currentMessages[idx] = fullMessage;
+      currentMessage = fullMessage;
     }
 
     const fullHeaders=currentMessage.payload?.headers||[];
@@ -544,4 +547,4 @@ $("mailList").addEventListener("scroll",loadMoreOnScroll);
 $("composeModal").addEventListener("click",e=>{if(e.target.id==="composeModal")closeCompose();});
 </script>
 </body>
-</html>  
+</html>
