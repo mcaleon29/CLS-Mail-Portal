@@ -171,6 +171,56 @@ function extractPlainText(payload) {
   return payload.body?.data ? decodeBase64Url(payload.body.data) : "";
 }
 
+function extractHtmlBody(payload) {
+  if (!payload) return "";
+  if (payload.mimeType === "text/html" && payload.body?.data) {
+    return decodeBase64Url(payload.body.data);
+  }
+  if (payload.parts) {
+    for (const p of payload.parts) {
+      const result = extractHtmlBody(p);
+      if (result) return result;
+    }
+  }
+  return "";
+}
+
+function makeSafeEmailHtml(htmlText) {
+  if (!htmlText) return "";
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(htmlText, "text/html");
+
+  doc.querySelectorAll("script,object,embed,applet,form,base,meta,link").forEach(x => x.remove());
+
+  doc.querySelectorAll("*").forEach(el => {
+    [...el.attributes].forEach(attr => {
+      const n = attr.name.toLowerCase();
+      const v = attr.value.trim().toLowerCase();
+      if (n.startsWith("on") || n === "srcdoc" || n === "formaction") {
+        el.removeAttribute(attr.name);
+      }
+      if ((n === "href" || n === "src") && v.startsWith("javascript:")) {
+        el.removeAttribute(attr.name);
+      }
+    });
+  });
+
+  doc.querySelectorAll("a").forEach(a => {
+    a.setAttribute("target","_blank");
+    a.setAttribute("rel","noopener noreferrer");
+  });
+
+  const style = doc.createElement("style");
+  style.textContent = `
+    body { font-family: Segoe UI, Arial, sans-serif; color:#202124; background:#fff;
+           margin:18px; line-height:1.5; overflow-wrap:anywhere; }
+    img { max-width:100%; height:auto; }
+    table { max-width:100%; }
+  `;
+  doc.head.appendChild(style);
+  return "<!doctype html>" + doc.documentElement.outerHTML;
+}
+
 function getAttachments(payload, result=[]) {
   if (!payload) return result;
   if (payload.filename && payload.body?.attachmentId) {
@@ -273,7 +323,16 @@ async function openMessage(id) {
   $("previewSender").textContent=headerValue(h,"From")||"Unknown sender";
   $("previewTo").textContent=headerValue(h,"To") ? "To: "+headerValue(h,"To") : "";
   $("previewDate").textContent=headerValue(h,"Date");
-  $("messageBody").textContent=extractPlainText(currentMessage.payload)||currentMessage.snippet||"(No readable message text.)";
+  const htmlBody = extractHtmlBody(currentMessage.payload);
+  const plainBody = extractPlainText(currentMessage.payload) || currentMessage.snippet || "(No readable message text.)";
+
+  if (htmlBody) {
+    $("messageBody").innerHTML = '<iframe id="emailFrame" title="Email content" sandbox="allow-same-origin" style="width:100%;height:100%;min-height:520px;border:0;background:white"></iframe>';
+    const frame = $("emailFrame");
+    frame.srcdoc = makeSafeEmailHtml(htmlBody);
+  } else {
+    $("messageBody").textContent = plainBody;
+  }
 
   const atts=getAttachments(currentMessage.payload);
   $("attachments").innerHTML=atts.length
@@ -300,7 +359,9 @@ function selectFolder(folder, el) {
 async function downloadAttachment(messageId, attachmentId, filename) {
   try {
     const data=await gmailFetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/"+messageId+"/attachments/"+attachmentId);
-    const bytes=Uint8Array.from(atob(data.data.replace(/-/g,"+").replace(/_/g,"/")),c=>c.charCodeAt(0));
+    let raw=(data.data||"").replace(/-/g,"+").replace(/_/g,"/");
+    while(raw.length%4) raw+="=";
+    const bytes=Uint8Array.from(atob(raw),c=>c.charCodeAt(0));
     const blob=new Blob([bytes]);
     const a=document.createElement("a");
     a.href=URL.createObjectURL(blob); a.download=filename; a.click();
