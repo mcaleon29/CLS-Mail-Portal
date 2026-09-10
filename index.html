@@ -29,7 +29,8 @@ button,input,textarea{font:inherit}button{cursor:pointer;border:0}
 .messages{display:block;min-height:0;height:auto;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:auto;background:#fff}.load-footer{display:block;padding:6px 9px;border-top:1px solid #d9dde2;background:#fff}.load-more{display:block;width:100%;padding:7px;border:1px solid #cfd5dc;border-radius:2px;background:#f7f9fb;color:#0b579b;font-weight:600;font-size:11px}.load-more:hover{background:#eaf4fc}.load-more:disabled{opacity:.6}
 .group-title{position:sticky;top:0;z-index:1;background:#eef1f4;border-bottom:1px solid #d6dbe0;padding:5px 10px;font-size:10px;font-weight:700;color:#555}
 .mail{padding:8px 10px;border-bottom:1px solid #e5e8eb;cursor:pointer;min-height:75px}.mail:hover{background:#f2f7fc}.mail.selected{background:#dceeff;border-left:3px solid #0f6cbd;padding-left:7px}.mail.unread .from,.mail.unread .subject{font-weight:700}.row{display:flex;gap:6px;align-items:center}.from{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.date{margin-left:auto;font-size:10px;color:#666;white-space:nowrap}.subject{font-size:12px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}.snippet{font-size:10.5px;color:#70757a;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.star{color:#8b929a}.important{color:#f59e0b}.attachment-mark{font-size:11px;margin-left:1px;color:#5b6572}
-.preview{background:#f3f4f6;display:flex;flex-direction:column;min-width:0;min-height:0}.previewhead{background:#fff;border-bottom:1px solid #d8dce1;padding:14px 20px 10px}.previewhead h1{font-size:18px;line-height:1.25;margin-bottom:7px;word-break:break-word}.meta{font-size:11px;color:#555;line-height:1.45}.meta strong{color:#222;font-size:12px}.actions{padding:6px 16px;background:#fff;border-bottom:1px solid #d8dce1}.actions button{background:#fff;padding:6px 10px;border-radius:2px;margin-right:3px;color:#333;font-size:12px}.actions button:hover{background:#eaf2f8}.attachments{padding:8px 16px;background:#fff;border-bottom:1px solid #d8dce1;max-height:92px;overflow:auto}.attachment{display:inline-block;background:#f6f7f8;border:1px solid #cbd1d7;padding:7px 9px;border-radius:2px;margin:2px 5px 2px 0;font-size:11px;color:#333}.attachment:hover{background:#eaf3fa}
+.preview{background:#f3f4f6;display:flex;flex-direction:column;min-width:0;min-height:0}.previewhead{background:#fff;border-bottom:1px solid #d8dce1;padding:14px 20px 10px}.previewhead h1{font-size:18px;line-height:1.25;margin-bottom:7px;word-break:break-word}.meta{font-size:11px;color:#555;line-height:1.45}.meta strong{color:#222;font-size:12px}.actions{padding:6px 16px;background:#fff;border-bottom:1px solid #d8dce1}.actions button{background:#fff;padding:6px 10px;border-radius:2px;margin-right:3px;color:#333;font-size:12px}.actions button:hover{background:#eaf2f8}.attachments{padding:8px 16px;background:#fff;border-bottom:1px solid #d8dce1;max-height:92px;overflow:auto}.attachment-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px}.save-all{padding:6px 10px;border:1px solid #b8c2cc;border-radius:2px;background:#eef5fb;color:#0b579b;font-weight:600;font-size:11px}.save-all:hover{background:#dfeef9}.save-all:disabled{opacity:.6;cursor:wait}
+.attachment{display:inline-block;background:#f6f7f8;border:1px solid #cbd1d7;padding:7px 9px;border-radius:2px;margin:2px 5px 2px 0;font-size:11px;color:#333}.attachment:hover{background:#eaf3fa}
 .body{padding:18px;overflow:auto;white-space:pre-wrap;line-height:1.55;font-size:13px;flex:1;background:#fff;margin:10px 12px;border:1px solid #d6dbe0;border-radius:2px;min-height:0}.body iframe{display:block;width:100%;height:100%;min-height:500px;border:0;background:#fff}
 .compose-modal{display:none;position:fixed;inset:0;background:#0006;z-index:50;align-items:center;justify-content:center;padding:20px}.compose-modal.show{display:flex}.compose{width:min(700px,100%);background:#fff;border-radius:4px;box-shadow:0 15px 50px #0005;overflow:hidden}.compose-head{background:#0f6cbd;color:#fff;padding:11px 15px;display:flex;justify-content:space-between;align-items:center}.close{background:transparent;color:#fff;font-size:22px}.compose-body{padding:14px}.field{display:flex;border-bottom:1px solid #e2e5e9;padding:9px 0}.field label{width:60px;color:#666;font-size:12px}.field input{border:0;outline:0;flex:1;font-size:12px}.compose-body textarea{width:100%;min-height:230px;border:0;outline:0;padding:12px 0;resize:vertical;font-size:12px}.compose-foot{padding:10px 15px;border-top:1px solid #e2e5e9;display:flex;align-items:center;gap:10px}.send-btn{background:#0f6cbd;color:#fff;padding:9px 16px;border-radius:2px;font-weight:600}.send-btn:disabled{background:#9ca3af}.compose-status{font-size:12px;color:#2563eb}
 @media(max-width:1000px){.layout{grid-template-columns:190px 360px minmax(340px,1fr)}.ribbon-search input{width:160px}}
@@ -497,7 +498,7 @@ async function openMessage(id) {
     const listIdx=currentMessages.findIndex(x=>x.id===currentMessage.id);
     if(listIdx>=0) currentMessages[listIdx]._hasAttachment = atts.length > 0;
     $("attachments").innerHTML=atts.length
-      ? "<strong>Attachments:</strong> "+atts.map(a=>`<button class="attachment" onclick="downloadAttachment('${currentMessage.id}','${a.attachmentId}','${escapeHtml(a.filename).replace(/'/g,"&#039;")}')">📎 ${escapeHtml(a.filename)}</button>`).join("")
+      ? "<div class=\"attachment-head\"><strong>Attachments:</strong><button class=\"save-all\" id=\"saveAllBtn\" onclick=\"saveAllAttachments()\">📥 Save All Attachments</button></div>" + atts.map(a=>`<button class="attachment" onclick="downloadAttachment('${currentMessage.id}','${a.attachmentId}','${escapeHtml(a.filename).replace(/'/g,"&#039;")}')">📎 ${escapeHtml(a.filename)}</button>`).join("")
       : "";
     renderMailList();
   } catch(e) {
@@ -524,6 +525,24 @@ async function downloadAttachment(messageId, attachmentId, filename) {
     a.href=URL.createObjectURL(blob); a.download=filename; a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   } catch(e) { alert("Unable to download attachment: "+e.message); }
+}
+
+
+async function saveAllAttachments() {
+  if (!currentMessage) { alert("Select an email first."); return; }
+  const atts=getAttachments(currentMessage.payload);
+  if (!atts.length) { alert("This email has no attachments."); return; }
+  const btn=$("saveAllBtn");
+  if (btn) { btn.disabled=true; btn.textContent="⏳ Saving attachments..."; }
+  try {
+    for (let i=0;i<atts.length;i++) {
+      const a=atts[i];
+      await downloadAttachment(currentMessage.id,a.attachmentId,a.filename);
+      if (i<atts.length-1) await new Promise(r=>setTimeout(r,350));
+    }
+  } finally {
+    if (btn) { btn.disabled=false; btn.textContent="📥 Save All Attachments"; }
+  }
 }
 
 function downloadCurrent() {
