@@ -176,6 +176,31 @@ function decodeBase64Url(data) {
   } catch(e) { return ""; }
 }
 
+async function getPartData(part, messageId) {
+  if (!part) return "";
+  if (part.body?.data) return decodeBase64Url(part.body.data);
+  if (part.body?.attachmentId && messageId) {
+    try {
+      const data = await gmailFetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/" + messageId + "/attachments/" + part.body.attachmentId);
+      return decodeBase64Url(data.data || "");
+    } catch (e) { return ""; }
+  }
+  return "";
+}
+
+async function extractBodyAsync(payload, messageId, wantedType) {
+  if (!payload) return "";
+  if (payload.mimeType === wantedType) {
+    const direct = await getPartData(payload, messageId);
+    if (direct) return direct;
+  }
+  for (const part of (payload.parts || [])) {
+    const result = await extractBodyAsync(part, messageId, wantedType);
+    if (result) return result;
+  }
+  return "";
+}
+
 function extractPlainText(payload) {
   if (!payload) return "";
   if (payload.mimeType === "text/plain" && payload.body?.data) return decodeBase64Url(payload.body.data);
@@ -424,8 +449,12 @@ async function openMessage(id) {
     $("previewTo").textContent=headerValue(fullHeaders,"To") ? "To: "+headerValue(fullHeaders,"To") : "";
     $("previewDate").textContent=headerValue(fullHeaders,"Date");
 
-    const htmlBody=extractHtmlBody(currentMessage.payload);
-    const plainBody=extractPlainText(currentMessage.payload)||currentMessage.snippet||"(No readable message text.)";
+    // Gmail may store larger text/html parts as attachment data. Fetch that part only when opened.
+    let htmlBody = extractHtmlBody(currentMessage.payload);
+    let plainBody = extractPlainText(currentMessage.payload);
+    if (!htmlBody) htmlBody = await extractBodyAsync(currentMessage.payload, currentMessage.id, "text/html");
+    if (!plainBody) plainBody = await extractBodyAsync(currentMessage.payload, currentMessage.id, "text/plain");
+    plainBody = plainBody || currentMessage.snippet || "(No readable message text.)";
     if (htmlBody) {
       $("messageBody").innerHTML='<iframe id="emailFrame" title="Email content" sandbox="allow-same-origin" style="width:100%;height:100%;min-height:520px;border:0;background:white"></iframe>';
       $("emailFrame").srcdoc=makeSafeEmailHtml(htmlBody);
