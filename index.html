@@ -125,6 +125,12 @@ let gmailAccessToken = null;
 let currentFolder = "inbox";
 let currentMessages = [];
 let currentMessage = null;
+let folderIds = [];
+let nextPageToken = "";
+let loadingMore = false;
+let allIdsLoaded = false;
+const PAGE_SIZE = 20;
+const META_BATCH = 5;
 
 const $ = id => document.getElementById(id);
 
@@ -134,13 +140,23 @@ function setConnected(ok) {
   $("userStatus").textContent = ok ? "Gmail Connected" : "Not Connected";
 }
 
-async function gmailFetch(url, options={}) {
+async function gmailFetch(url, options={}, retries=2) {
   const headers = Object.assign({}, options.headers || {});
   headers.Authorization = "Bearer " + gmailAccessToken;
   if (options.body) headers["Content-Type"] = "application/json";
   const response = await fetch(url, Object.assign({}, options, {headers}));
   const data = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error(data.error?.message || "Gmail request failed");
+
+  if (!response.ok) {
+    const msg = data.error?.message || "Gmail request failed";
+    const reason = (data.error?.errors || []).map(x => x.reason).join(" ");
+    const rateLimited = response.status === 429 || response.status === 403 && /quota|rate|userRateLimitExceeded|rateLimitExceeded/i.test(msg + " " + reason);
+    if (rateLimited && retries > 0) {
+      await new Promise(r => setTimeout(r, 1500 * (3 - retries)));
+      return gmailFetch(url, options, retries - 1);
+    }
+    throw new Error(msg);
+  }
   return data;
 }
 
@@ -173,9 +189,7 @@ function extractPlainText(payload) {
 
 function extractHtmlBody(payload) {
   if (!payload) return "";
-  if (payload.mimeType === "text/html" && payload.body?.data) {
-    return decodeBase64Url(payload.body.data);
-  }
+  if (payload.mimeType === "text/html" && payload.body?.data) return decodeBase64Url(payload.body.data);
   if (payload.parts) {
     for (const p of payload.parts) {
       const result = extractHtmlBody(p);
@@ -189,34 +203,21 @@ function makeSafeEmailHtml(htmlText) {
   if (!htmlText) return "";
   const parser = new DOMParser();
   const doc = parser.parseFromString(htmlText, "text/html");
-
   doc.querySelectorAll("script,object,embed,applet,form,base,meta,link").forEach(x => x.remove());
-
   doc.querySelectorAll("*").forEach(el => {
     [...el.attributes].forEach(attr => {
       const n = attr.name.toLowerCase();
       const v = attr.value.trim().toLowerCase();
-      if (n.startsWith("on") || n === "srcdoc" || n === "formaction") {
-        el.removeAttribute(attr.name);
-      }
-      if ((n === "href" || n === "src") && v.startsWith("javascript:")) {
-        el.removeAttribute(attr.name);
-      }
+      if (n.startsWith("on") || n === "srcdoc" || n === "formaction") el.removeAttribute(attr.name);
+      if ((n === "href" || n === "src") && v.startsWith("javascript:")) el.removeAttribute(attr.name);
     });
   });
-
   doc.querySelectorAll("a").forEach(a => {
     a.setAttribute("target","_blank");
     a.setAttribute("rel","noopener noreferrer");
   });
-
   const style = doc.createElement("style");
-  style.textContent = `
-    body { font-family: Segoe UI, Arial, sans-serif; color:#202124; background:#fff;
-           margin:18px; line-height:1.5; overflow-wrap:anywhere; }
-    img { max-width:100%; height:auto; }
-    table { max-width:100%; }
-  `;
+  style.textContent = `body{font-family:Segoe UI,Arial,sans-serif;color:#202124;background:#fff;margin:18px;line-height:1.5;overflow-wrap:anywhere}img{max-width:100%;height:auto}table{max-width:100%}`;
   doc.head.appendChild(style);
   return "<!doctype html>" + doc.documentElement.outerHTML;
 }
@@ -224,14 +225,14 @@ function makeSafeEmailHtml(htmlText) {
 function getAttachments(payload, result=[]) {
   if (!payload) return result;
   if (payload.filename && payload.body?.attachmentId) {
-    result.push({filename:payload.filename, mimeType:payload.mimeType, attachmentId:payload.body.attachmentId, size:payload.body.size || 0});
+    result.push({filename:payload.filename,mimeType:payload.mimeType,attachmentId:payload.body.attachmentId,size:payload.body.size||0});
   }
   (payload.parts || []).forEach(p => getAttachments(p,result));
   return result;
 }
 
 function escapeHtml(s) {
-  return String(s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+  return String(s || "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#039;"}[c]));
 }
 
 function shortDate(ms) {
@@ -246,73 +247,115 @@ function queryForFolder(folder) {
 }
 
 async function getGmailCount(query) {
-  const data = await gmailFetch("https://gmail.googleapis.com/gmail/v1/users/me/messages?q=" + encodeURIComponent(query));
+  const data = await gmailFetch("https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=1&q=" + encodeURIComponent(query));
   return data.resultSizeEstimate || 0;
 }
 
 async function loadGmailCounts() {
-  const values = await Promise.all([
-    getGmailCount("in:inbox"),
-    getGmailCount("in:sent"),
-    getGmailCount("is:important"),
-    getGmailCount("is:unread")
-  ]);
-  $("inboxCount").textContent = values[0];
-  $("sentCount").textContent = values[1];
-  $("importantCount").textContent = values[2];
-  $("unreadCount").textContent = values[3];
+  try {
+    const values = await Promise.all([
+      getGmailCount("in:inbox"),
+      getGmailCount("in:sent"),
+      getGmailCount("is:important"),
+      getGmailCount("is:unread")
+    ]);
+    $("inboxCount").textContent = values[0];
+    $("sentCount").textContent = values[1];
+    $("importantCount").textContent = values[2];
+    $("unreadCount").textContent = values[3];
+  } catch(e) {
+    updateStatus("⚠ Counts unavailable: " + e.message);
+  }
+}
+
+async function getMessageMetadata(id) {
+  const url = "https://gmail.googleapis.com/gmail/v1/users/me/messages/" + id +
+    "?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Subject&metadataHeaders=Date";
+  return await gmailFetch(url);
 }
 
 async function getMessage(id) {
   return await gmailFetch("https://gmail.googleapis.com/gmail/v1/users/me/messages/" + id + "?format=full");
 }
 
-async function loadCurrentFolder() {
+async function loadCurrentFolder(reset=true) {
   if (!gmailAccessToken) {
     $("mailList").innerHTML = '<div class="empty">Connect Gmail first.</div>';
     return;
   }
+  if (loadingMore) return;
 
-  $("mailList").innerHTML = '<div class="empty">📥 Loading all messages...</div>';
-  updateStatus("Loading all " + $("folderTitle").textContent + "...");
+  if (reset) {
+    currentMessages = [];
+    folderIds = [];
+    nextPageToken = "";
+    allIdsLoaded = false;
+    currentMessage = null;
+    $("previewSubject").textContent = "Select an email";
+    $("previewSender").textContent = "No message selected";
+    $("previewTo").textContent = "";
+    $("previewDate").textContent = "";
+    $("messageBody").textContent = "Your selected email will appear here.";
+    $("attachments").innerHTML = "";
+    $("listTotal").textContent = "";
+    $("mailList").innerHTML = '<div class="empty">📥 Loading first 20 messages...</div>';
+  }
+
+  loadingMore = true;
+  updateStatus("Loading " + $("folderTitle").textContent + "...");
 
   try {
-    const ids = [];
-    let pageToken = "";
-
-    // Gmail can return pages. Keep requesting pages so the list can scroll
-    // through the complete folder instead of stopping at the first 50.
-    do {
-      let url =
-        "https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=100&q=" +
-        encodeURIComponent(queryForFolder(currentFolder));
-      if (pageToken) url += "&pageToken=" + encodeURIComponent(pageToken);
-
+    // Only fetch one small page of IDs. More IDs are fetched when the user scrolls.
+    if (!allIdsLoaded && folderIds.length === currentMessages.length) {
+      let url = "https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=" + PAGE_SIZE + "&q=" + encodeURIComponent(queryForFolder(currentFolder));
+      if (nextPageToken) url += "&pageToken=" + encodeURIComponent(nextPageToken);
       const data = await gmailFetch(url);
-      if (data.messages) ids.push(...data.messages);
-      pageToken = data.nextPageToken || "";
+      const newIds = data.messages || [];
+      folderIds.push(...newIds);
+      nextPageToken = data.nextPageToken || "";
+      if (!nextPageToken || newIds.length === 0) allIdsLoaded = true;
+    }
 
-      $("mailList").innerHTML =
-        '<div class="empty">📥 Loading messages... ' + ids.length + ' found</div>';
-    } while (pageToken);
+    const start = currentMessages.length;
+    const idsToFetch = folderIds.slice(start, start + PAGE_SIZE);
+    if (!idsToFetch.length) {
+      allIdsLoaded = true;
+      renderMailList();
+      updateStatus("✅ " + currentMessages.length + " messages loaded.");
+      return;
+    }
 
-    // Load the full content for every message returned by Gmail.
-    currentMessages = [];
-    const batchSize = 25;
-    for (let i = 0; i < ids.length; i += batchSize) {
-      const batch = ids.slice(i, i + batchSize);
-      const results = await Promise.all(batch.map(x => getMessage(x.id)));
+    for (let i = 0; i < idsToFetch.length; i += META_BATCH) {
+      const batch = idsToFetch.slice(i, i + META_BATCH);
+      const results = [];
+      for (const item of batch) {
+        try {
+          results.push(await getMessageMetadata(item.id));
+        } catch(e) {
+          // Keep loading other messages if one request is temporarily limited.
+          if (/quota|rate|limit/i.test(e.message)) throw e;
+        }
+        await new Promise(r => setTimeout(r, 120));
+      }
       currentMessages.push(...results);
-      $("mailList").innerHTML =
-        '<div class="empty">📥 Opening messages... ' +
-        currentMessages.length + ' / ' + ids.length + '</div>';
+      renderMailList();
+      updateStatus("📥 Loaded " + currentMessages.length + " messages. Scroll down for more.");
     }
 
     renderMailList();
-    updateStatus("✅ Gmail connected successfully! " + currentMessages.length + " messages loaded.");
   } catch(e) {
-    $("mailList").innerHTML = '<div class="empty">❌ ' + escapeHtml(e.message) + '</div>';
+    renderMailList();
     updateStatus("❌ Unable to load messages: " + e.message);
+    if (!currentMessages.length) $("mailList").innerHTML = '<div class="empty">❌ ' + escapeHtml(e.message) + '<br><br>Wait a little, then press ↻ Refresh.</div>';
+  } finally {
+    loadingMore = false;
+  }
+}
+
+async function loadMoreOnScroll() {
+  const box = $("mailList");
+  if (box.scrollTop + box.clientHeight >= box.scrollHeight - 250) {
+    if (!loadingMore && !allIdsLoaded) await loadCurrentFolder(false);
   }
 }
 
@@ -325,13 +368,15 @@ function renderMailList() {
   });
   if (!items.length) {
     $("mailList").innerHTML = '<div class="empty">No emails found.</div>';
+    $("listTotal").textContent = currentMessages.length ? currentMessages.length + " loaded" : "";
     return;
   }
-  $("listTotal").textContent = items.length ? items.length + " shown" : "";\n  $("mailList").innerHTML = items.map(m => {
+  $("listTotal").textContent = currentMessages.length + (allIdsLoaded ? " loaded" : " loaded • scroll for more");
+  $("mailList").innerHTML = items.map(m => {
     const h=m.payload?.headers||[];
     const from=headerValue(h,"From")||"Unknown sender";
     const subject=headerValue(h,"Subject")||"(No subject)";
-    const snippet=(m.snippet||extractPlainText(m.payload)||"").replace(/\s+/g," ").slice(0,110);
+    const snippet=(m.snippet||"").replace(/\s+/g," ").slice(0,110);
     const unread=m.labelIds?.includes("UNREAD");
     const important=m.labelIds?.includes("IMPORTANT");
     return `<div class="mail ${unread?"unread":""} ${currentMessage?.id===m.id?"selected":""}" onclick="openMessage('${m.id}')">
@@ -343,29 +388,49 @@ function renderMailList() {
 }
 
 async function openMessage(id) {
-  currentMessage = currentMessages.find(m => m.id === id);
-  if (!currentMessage) return;
-  const h=currentMessage.payload?.headers||[];
+  let message = currentMessages.find(m => m.id === id);
+  if (!message) return;
+  currentMessage = message;
+  const h=message.payload?.headers||[];
   $("previewSubject").textContent=headerValue(h,"Subject")||"(No subject)";
   $("previewSender").textContent=headerValue(h,"From")||"Unknown sender";
   $("previewTo").textContent=headerValue(h,"To") ? "To: "+headerValue(h,"To") : "";
   $("previewDate").textContent=headerValue(h,"Date");
-  const htmlBody = extractHtmlBody(currentMessage.payload);
-  const plainBody = extractPlainText(currentMessage.payload) || currentMessage.snippet || "(No readable message text.)";
+  $("messageBody").textContent="Loading message...";
+  $("attachments").innerHTML="";
 
-  if (htmlBody) {
-    $("messageBody").innerHTML = '<iframe id="emailFrame" title="Email content" sandbox="allow-same-origin" style="width:100%;height:100%;min-height:520px;border:0;background:white"></iframe>';
-    const frame = $("emailFrame");
-    frame.srcdoc = makeSafeEmailHtml(htmlBody);
-  } else {
-    $("messageBody").textContent = plainBody;
+  try {
+    // Full message is fetched ONLY when the user opens it. This greatly reduces quota usage.
+    if (!message.payload || message.payload.mimeType === undefined) {
+      message = await getMessage(id);
+      const idx = currentMessages.findIndex(m => m.id === id);
+      if (idx >= 0) currentMessages[idx] = message;
+      currentMessage = message;
+    }
+
+    const fullHeaders=currentMessage.payload?.headers||[];
+    $("previewSubject").textContent=headerValue(fullHeaders,"Subject")||"(No subject)";
+    $("previewSender").textContent=headerValue(fullHeaders,"From")||"Unknown sender";
+    $("previewTo").textContent=headerValue(fullHeaders,"To") ? "To: "+headerValue(fullHeaders,"To") : "";
+    $("previewDate").textContent=headerValue(fullHeaders,"Date");
+
+    const htmlBody=extractHtmlBody(currentMessage.payload);
+    const plainBody=extractPlainText(currentMessage.payload)||currentMessage.snippet||"(No readable message text.)";
+    if (htmlBody) {
+      $("messageBody").innerHTML='<iframe id="emailFrame" title="Email content" sandbox="allow-same-origin" style="width:100%;height:100%;min-height:520px;border:0;background:white"></iframe>';
+      $("emailFrame").srcdoc=makeSafeEmailHtml(htmlBody);
+    } else {
+      $("messageBody").textContent=plainBody;
+    }
+
+    const atts=getAttachments(currentMessage.payload);
+    $("attachments").innerHTML=atts.length
+      ? "<strong>Attachments:</strong> "+atts.map(a=>`<button class="attachment" onclick="downloadAttachment('${currentMessage.id}','${a.attachmentId}','${escapeHtml(a.filename).replace(/'/g,"&#039;")}')">📎 ${escapeHtml(a.filename)}</button>`).join("")
+      : "";
+    renderMailList();
+  } catch(e) {
+    $("messageBody").textContent="Unable to open message: "+e.message;
   }
-
-  const atts=getAttachments(currentMessage.payload);
-  $("attachments").innerHTML=atts.length
-    ? "<strong>Attachments:</strong> " + atts.map((a,i)=>`<button class="attachment" onclick="downloadAttachment('${currentMessage.id}','${a.attachmentId}','${escapeHtml(a.filename).replace(/'/g,"&#039;")}')">📎 ${escapeHtml(a.filename)}</button>`).join("")
-    : "";
-  renderMailList();
 }
 
 function selectFolder(folder, el) {
@@ -373,14 +438,7 @@ function selectFolder(folder, el) {
   document.querySelectorAll(".nav").forEach(x=>x.classList.remove("active"));
   el.classList.add("active");
   $("folderTitle").textContent={inbox:"Inbox",sent:"Sent",important:"Important",unread:"Unread",trash:"Trash"}[folder];
-  currentMessage=null;
-  $("previewSubject").textContent="Select an email";
-  $("previewSender").textContent="No message selected";
-  $("previewTo").textContent="";
-  $("previewDate").textContent="";
-  $("messageBody").textContent="Your selected email will appear here.";
-  $("attachments").innerHTML="";
-  loadCurrentFolder();
+  loadCurrentFolder(true);
 }
 
 async function downloadAttachment(messageId, attachmentId, filename) {
@@ -475,6 +533,7 @@ function connectGmail() {
 
 $("gmailButton").addEventListener("click",connectGmail);
 $("searchBox").addEventListener("input",renderMailList);
+$("mailList").addEventListener("scroll",loadMoreOnScroll);
 $("composeModal").addEventListener("click",e=>{if(e.target.id==="composeModal")closeCompose();});
 </script>
 </body>
