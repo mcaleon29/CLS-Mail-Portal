@@ -7,105 +7,82 @@
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Segoe UI,Arial,sans-serif;background:#f5f7fb;color:#202124;height:100vh;overflow:hidden}
+html,body{height:100%;font-family:"Segoe UI",Arial,sans-serif;color:#202124;background:#fff;overflow:hidden}
 button,input,textarea{font:inherit}button{cursor:pointer;border:0}
-.topbar{height:60px;background:#17365d;color:white;display:flex;align-items:center;gap:16px;padding:0 18px}
-.logo{font-size:21px;font-weight:700;white-space:nowrap}.logo span{font-weight:400;color:#bfe7ff}
-.search{flex:1;max-width:650px;position:relative}.search input{width:100%;height:38px;border:0;border-radius:6px;padding:0 42px 0 15px;outline:0}
-.search button{position:absolute;right:3px;top:3px;height:32px;width:38px;background:transparent}
-.user{margin-left:auto;font-size:13px;white-space:nowrap}
-.dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ef4444;margin-right:6px}.dot.ok{background:#22c55e}
-.layout{height:calc(100vh - 60px);display:grid;grid-template-columns:220px 400px minmax(0,1fr);min-height:0;overflow:hidden}
-.sidebar{background:white;border-right:1px solid #dfe3e8;padding:14px 10px;overflow:auto}
-.new-btn{width:100%;background:#2563eb;color:white;padding:12px;border-radius:7px;font-weight:700;margin-bottom:14px}
-.new-btn:hover{background:#1d4ed8}
-.nav{display:flex;align-items:center;gap:10px;width:100%;padding:10px 12px;background:transparent;border-radius:6px;text-align:left;color:#374151;margin:2px 0}
-.nav:hover,.nav.active{background:#e8f1ff;color:#17365d;font-weight:600}.nav .num{margin-left:auto;font-size:12px;color:#6b7280}
-.connect{margin-top:20px;padding:12px;border:1px solid #dbe2ea;border-radius:8px;background:#f8fafc;font-size:12px;color:#6b7280}
-.gmail-btn{width:100%;margin-top:9px;padding:9px;border-radius:6px;background:#ea4335;color:white;font-weight:600}
-.listpane{background:white;border-right:1px solid #dfe3e8;display:grid;grid-template-rows:58px minmax(0,1fr) auto;min-width:0;min-height:0;height:100%;overflow:hidden}
-.listhead{height:58px;border-bottom:1px solid #e3e7eb;display:flex;align-items:center;padding:0 15px;gap:10px}
-.listhead h2{font-size:18px}.refresh{margin-left:auto;background:transparent;padding:7px;font-size:20px;color:#4b5563}
-.messages{display:block;min-height:0;height:auto;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:auto;scroll-behavior:smooth}
-.load-footer{display:block;padding:8px 12px;border-top:1px solid #e3e7eb;background:#fff;position:relative;z-index:2}.load-more{display:block;width:100%;padding:9px;border:1px solid #d7dee8;border-radius:7px;background:#f8fafc;color:#17365d;font-weight:600;cursor:pointer}.load-more:hover{background:#eef4ff}.load-more:disabled{opacity:.6;cursor:wait}
-.mail{padding:12px 14px;border-bottom:1px solid #edf0f3;cursor:pointer}
-.mail:hover{background:#f6f9fc}.mail.selected{background:#eaf2ff;border-left:3px solid #2563eb;padding-left:11px}
-.mail.unread .from,.mail.unread .subject{font-weight:700}
-.row{display:flex;gap:7px;align-items:center}.from{font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.date{margin-left:auto;font-size:11px;color:#6b7280;white-space:nowrap}
-.subject{font-size:13px;margin-top:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.snippet{font-size:12px;color:#6b7280;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.star{color:#b9bec7}.important{color:#f59e0b}
-.empty{padding:35px 20px;text-align:center;color:#6b7280;line-height:1.5}
-.preview{background:#f8fafc;display:flex;flex-direction:column;min-width:0}
-.previewhead{background:white;border-bottom:1px solid #e3e7eb;padding:18px 24px}
-.previewhead h1{font-size:20px;line-height:1.3;margin-bottom:12px;word-break:break-word}
-.meta{font-size:13px;color:#4b5563;line-height:1.45}.meta strong{color:#202124}
-.actions{padding:9px 24px;background:white;border-bottom:1px solid #e3e7eb}
-.actions button{background:white;padding:7px 11px;border-radius:5px;margin-right:5px;color:#374151}
-.actions button:hover{background:#eef2f7}
-.body{padding:24px;overflow:auto;white-space:pre-wrap;line-height:1.55;font-size:14px;flex:1;background:white;margin:14px;border:1px solid #e1e5ea;border-radius:8px}
-.attachments{padding:0 24px 14px;background:white}.attachment{display:inline-block;background:#eef4ff;border:1px solid #cddcf7;padding:7px 10px;border-radius:5px;margin:4px 5px 0 0;font-size:12px}
-.compose-modal{display:none;position:fixed;inset:0;background:#0006;z-index:50;align-items:center;justify-content:center;padding:20px}
-.compose-modal.show{display:flex}.compose{width:min(700px,100%);background:white;border-radius:9px;box-shadow:0 15px 50px #0005;overflow:hidden}
-.compose-head{background:#17365d;color:white;padding:13px 17px;display:flex;justify-content:space-between;align-items:center}
-.close{background:transparent;color:white;font-size:22px}.compose-body{padding:16px}
-.field{display:flex;border-bottom:1px solid #e2e5e9;padding:10px 0}.field label{width:70px;color:#6b7280}.field input{border:0;outline:0;flex:1}
-.compose-body textarea{width:100%;min-height:230px;border:0;outline:0;padding:14px 0;resize:vertical}
-.compose-foot{padding:12px 17px;border-top:1px solid #e2e5e9;display:flex;align-items:center;gap:10px}
-.send-btn{background:#2563eb;color:white;padding:10px 18px;border-radius:6px;font-weight:700}.send-btn:disabled{background:#9ca3af}
-.compose-status{font-size:13px;color:#2563eb}
-@media(max-width:900px){.layout{grid-template-columns:190px 330px minmax(350px,1fr)}}
-
-/* Outlook-inspired enhancements */
-.topbar{height:54px;background:#0f5ea8;padding:0 14px;gap:12px}
-.logo{font-size:18px;min-width:180px}
-.search{max-width:560px}.search input{height:34px;border-radius:3px;background:#fff}
-.layout{height:calc(100vh - 54px);grid-template-columns:205px 430px minmax(0,1fr)}
-.sidebar{padding:10px 8px;background:#f7f9fc}
-.new-btn{background:#0f6cbd;border-radius:3px;padding:10px;margin-bottom:10px}
-.nav{border-radius:2px;padding:8px 10px;margin:1px 0}
-.nav.active{background:#dceeff;color:#0b4f8a}
-.connect{margin-top:14px}
-.listpane{grid-template-rows:54px minmax(0,1fr) auto}
-.listhead{height:54px;padding:0 12px;background:#fff}
-.listhead h2{font-size:17px}
-.messages{background:#fff}
-.mail{padding:9px 11px 10px;border-bottom:1px solid #e6e9ed;min-height:76px}
-.mail:hover{background:#f3f8fd}.mail.selected{background:#dfeeff;border-left:3px solid #0f6cbd;padding-left:8px}
-.from{font-size:13px}.subject{font-size:12.5px;font-weight:600}.snippet{font-size:11.5px}
-.group-title{position:sticky;top:0;z-index:1;background:#eef2f6;border-bottom:1px solid #d9dee5;padding:5px 11px;font-size:11px;font-weight:700;color:#4b5563}
-.attachment-mark{font-size:12px;margin-left:2px;color:#5b6572}.mail.unread{background:#fff}
-.preview{background:#f1f3f5}
-.previewhead{padding:15px 20px 12px}.previewhead h1{font-size:19px;margin-bottom:8px}
-.actions{padding:7px 20px}.actions button{font-size:13px;padding:6px 9px}
-.attachments{padding:10px 20px 8px;background:#fff;border-bottom:1px solid #e3e7eb}
-.attachment{background:#f5f7fa;border:1px solid #cfd6df;border-radius:2px;padding:8px 10px;margin:3px 5px 3px 0;text-align:left}
-.body{margin:12px 14px;padding:18px;min-height:0;border-radius:3px;background:#fff}
-.mail-tools{display:flex;align-items:center;gap:6px;margin-left:auto}.count-pill{font-size:11px;color:#6b7280}
-@media(max-width:900px){.layout{grid-template-columns:190px 360px minmax(350px,1fr)}}
-@media(max-width:700px){body{overflow:auto}.layout{height:auto;min-width:0;grid-template-columns:1fr}.sidebar{display:none}.listpane{height:48vh}.preview{min-height:52vh}.user{display:none}}
+.titlebar{height:30px;background:#0b579b;color:#fff;display:flex;align-items:center;padding:0 10px;font-size:12px}
+.titlebar .app{font-weight:600}.titlebar .title{margin-left:18px;opacity:.95}.titlebar .window{margin-left:auto;display:flex;gap:16px;opacity:.9}
+.ribbon{height:112px;background:#f7f7f7;border-bottom:1px solid #c9cdd2;display:flex;flex-direction:column}
+.ribbon-tabs{height:31px;display:flex;align-items:end;padding-left:10px;gap:18px;border-bottom:1px solid #d7dbe0}
+.ribbon-tab{height:31px;padding:7px 10px 6px;background:transparent;color:#222;font-size:12px}.ribbon-tab.active{font-weight:600;border-bottom:2px solid #0f6cbd;color:#0b579b}
+.ribbon-body{flex:1;display:flex;align-items:stretch;padding:5px 8px;gap:8px;overflow:hidden}
+.ribbon-group{display:flex;align-items:center;gap:4px;border-right:1px solid #d5d8dc;padding:0 9px 0 2px;position:relative}
+.ribbon-group:last-child{border-right:0}.ribbon-item{min-width:58px;height:66px;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;color:#222;border-radius:3px;font-size:11px}.ribbon-item:hover{background:#e6f1fb}.ribbon-item .ico{font-size:25px;line-height:25px}.ribbon-label{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:10px;color:#666}
+.ribbon-search{margin-left:auto;display:flex;align-items:center;gap:6px;padding:0 4px}.ribbon-search input{width:230px;height:29px;border:1px solid #bfc5cc;padding:0 10px;background:#fff}.ribbon-search button{height:29px;width:34px;background:#fff;border:1px solid #bfc5cc}
+.statusline{height:24px;background:#f4f5f6;border-bottom:1px solid #d9dde2;display:flex;align-items:center;padding:0 8px;font-size:11px;color:#666}.statusline .right{margin-left:auto}.dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#e53935;margin-right:5px}.dot.ok{background:#22a447}
+.layout{height:calc(100vh - 166px);display:grid;grid-template-columns:205px 430px minmax(0,1fr);min-height:0;overflow:hidden}
+.sidebar{background:#f7f8fa;border-right:1px solid #cfd4da;padding:8px 7px;overflow:auto}
+.fav-title{font-size:11px;font-weight:700;color:#555;padding:3px 8px 5px}.new-btn{width:100%;background:#0f6cbd;color:#fff;padding:10px 10px;border-radius:2px;font-weight:600;margin-bottom:8px}.new-btn:hover{background:#0b5da5}
+.nav{display:flex;align-items:center;gap:8px;width:100%;padding:7px 9px;background:transparent;border-radius:2px;text-align:left;color:#333;margin:1px 0;font-size:12px}.nav:hover,.nav.active{background:#dceeff;color:#0b579b;font-weight:600}.nav .num{margin-left:auto;font-size:11px;color:#666}.section-label{font-size:11px;color:#666;padding:11px 8px 3px;text-transform:none}
+.connect{margin-top:12px;padding:9px;border:1px solid #d6dbe1;background:#fff;font-size:11px;color:#666}.gmail-btn{width:100%;margin-top:7px;padding:8px;border-radius:2px;background:#e74737;color:#fff;font-weight:600;font-size:11px}
+.listpane{background:#fff;border-right:1px solid #cfd4da;display:grid;grid-template-rows:45px minmax(0,1fr) 40px;min-width:0;min-height:0;height:100%;overflow:hidden}
+.listhead{height:45px;border-bottom:1px solid #d9dde2;display:flex;align-items:center;padding:0 11px;gap:7px;background:#fff}.listhead h2{font-size:17px;font-weight:600}.mail-tools{display:flex;align-items:center;gap:4px;margin-left:auto}.count-pill{font-size:10px;color:#777}.refresh{background:transparent;padding:4px;font-size:18px;color:#555}
+.messages{display:block;min-height:0;height:auto;overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;scrollbar-width:auto;background:#fff}.load-footer{display:block;padding:6px 9px;border-top:1px solid #d9dde2;background:#fff}.load-more{display:block;width:100%;padding:7px;border:1px solid #cfd5dc;border-radius:2px;background:#f7f9fb;color:#0b579b;font-weight:600;font-size:11px}.load-more:hover{background:#eaf4fc}.load-more:disabled{opacity:.6}
+.group-title{position:sticky;top:0;z-index:1;background:#eef1f4;border-bottom:1px solid #d6dbe0;padding:5px 10px;font-size:10px;font-weight:700;color:#555}
+.mail{padding:8px 10px;border-bottom:1px solid #e5e8eb;cursor:pointer;min-height:75px}.mail:hover{background:#f2f7fc}.mail.selected{background:#dceeff;border-left:3px solid #0f6cbd;padding-left:7px}.mail.unread .from,.mail.unread .subject{font-weight:700}.row{display:flex;gap:6px;align-items:center}.from{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.date{margin-left:auto;font-size:10px;color:#666;white-space:nowrap}.subject{font-size:12px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:600}.snippet{font-size:10.5px;color:#70757a;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.star{color:#8b929a}.important{color:#f59e0b}.attachment-mark{font-size:11px;margin-left:1px;color:#5b6572}
+.preview{background:#f3f4f6;display:flex;flex-direction:column;min-width:0;min-height:0}.previewhead{background:#fff;border-bottom:1px solid #d8dce1;padding:14px 20px 10px}.previewhead h1{font-size:18px;line-height:1.25;margin-bottom:7px;word-break:break-word}.meta{font-size:11px;color:#555;line-height:1.45}.meta strong{color:#222;font-size:12px}.actions{padding:6px 16px;background:#fff;border-bottom:1px solid #d8dce1}.actions button{background:#fff;padding:6px 10px;border-radius:2px;margin-right:3px;color:#333;font-size:12px}.actions button:hover{background:#eaf2f8}.attachments{padding:8px 16px;background:#fff;border-bottom:1px solid #d8dce1;max-height:92px;overflow:auto}.attachment{display:inline-block;background:#f6f7f8;border:1px solid #cbd1d7;padding:7px 9px;border-radius:2px;margin:2px 5px 2px 0;font-size:11px;color:#333}.attachment:hover{background:#eaf3fa}
+.body{padding:18px;overflow:auto;white-space:pre-wrap;line-height:1.55;font-size:13px;flex:1;background:#fff;margin:10px 12px;border:1px solid #d6dbe0;border-radius:2px;min-height:0}.body iframe{display:block;width:100%;height:100%;min-height:500px;border:0;background:#fff}
+.compose-modal{display:none;position:fixed;inset:0;background:#0006;z-index:50;align-items:center;justify-content:center;padding:20px}.compose-modal.show{display:flex}.compose{width:min(700px,100%);background:#fff;border-radius:4px;box-shadow:0 15px 50px #0005;overflow:hidden}.compose-head{background:#0f6cbd;color:#fff;padding:11px 15px;display:flex;justify-content:space-between;align-items:center}.close{background:transparent;color:#fff;font-size:22px}.compose-body{padding:14px}.field{display:flex;border-bottom:1px solid #e2e5e9;padding:9px 0}.field label{width:60px;color:#666;font-size:12px}.field input{border:0;outline:0;flex:1;font-size:12px}.compose-body textarea{width:100%;min-height:230px;border:0;outline:0;padding:12px 0;resize:vertical;font-size:12px}.compose-foot{padding:10px 15px;border-top:1px solid #e2e5e9;display:flex;align-items:center;gap:10px}.send-btn{background:#0f6cbd;color:#fff;padding:9px 16px;border-radius:2px;font-weight:600}.send-btn:disabled{background:#9ca3af}.compose-status{font-size:12px;color:#2563eb}
+@media(max-width:1000px){.layout{grid-template-columns:190px 360px minmax(340px,1fr)}.ribbon-search input{width:160px}}
+@media(max-width:700px){body{overflow:auto}.titlebar{display:none}.ribbon{height:80px}.ribbon-body{overflow-x:auto}.ribbon-tabs{display:none}.ribbon-item{height:55px}.layout{height:calc(100vh - 104px);grid-template-columns:1fr}.sidebar{display:none}.listpane{height:48vh}.preview{min-height:52vh}.ribbon-search{display:none}}
 </style>
 </head>
 <body>
-
-<header class="topbar">
-  <div class="logo">CLS <span>Mail Portal</span></div>
-  <div class="search">
-    <input id="searchBox" type="text" placeholder="Search mail">
-    <button onclick="renderMailList()" title="Search">🔍</button>
+<div class="titlebar"><span class="app">CLS Mail Portal</span><span class="title">— Gmail Mailbox</span><span class="window">□　—　✕</span></div>
+<header class="ribbon">
+  <div class="ribbon-tabs">
+    <button class="ribbon-tab active">Home</button><button class="ribbon-tab">Send / Receive</button><button class="ribbon-tab">Folder</button><button class="ribbon-tab">View</button><button class="ribbon-tab">Help</button>
   </div>
-  <div class="user"><span id="connectionDot" class="dot"></span><span id="userStatus">Not Connected</span></div>
+  <div class="ribbon-body">
+    <div class="ribbon-group">
+      <button class="ribbon-item" onclick="openCompose()"><span class="ico">✉</span><span>New Email</span></button>
+      <button class="ribbon-item" onclick="loadCurrentFolder(true)"><span class="ico">↻</span><span>Refresh</span></button>
+    </div>
+    <div class="ribbon-group">
+      <button class="ribbon-item" onclick="replyCurrent()"><span class="ico">↩</span><span>Reply</span></button>
+      <button class="ribbon-item" onclick="forwardCurrent()"><span class="ico">↪</span><span>Forward</span></button>
+      <button class="ribbon-item" onclick="downloadCurrent()"><span class="ico">⇩</span><span>Save</span></button>
+    </div>
+    <div class="ribbon-group">
+      <button class="ribbon-item" onclick="selectFolder('inbox',document.querySelectorAll('.nav')[0])"><span class="ico">📥</span><span>Inbox</span></button>
+      <button class="ribbon-item" onclick="selectFolder('sent',document.querySelectorAll('.nav')[1])"><span class="ico">📤</span><span>Sent</span></button>
+      <button class="ribbon-item" onclick="selectFolder('trash',document.querySelectorAll('.nav')[4])"><span class="ico">🗑</span><span>Delete</span></button>
+    </div>
+    <div class="ribbon-group">
+      <button class="ribbon-item" onclick="connectGmail()"><span class="ico">🔗</span><span>Connect Gmail</span></button>
+      <button class="ribbon-item" onclick="alert('Use the Search Mail box to filter sender, subject, or recipient.')"><span class="ico">🔎</span><span>Find</span></button>
+    </div>
+    <div class="ribbon-search"><input id="searchBox" type="text" placeholder="Search Mail"><button onclick="renderMailList()">🔍</button></div>
+  </div>
 </header>
+<div class="statusline"><span id="connectionDot" class="dot"></span><span id="userStatus">Not Connected</span><span class="right">CLS Mail Portal • Outlook-style view</span></div>
 
 <div class="layout">
   <aside class="sidebar">
+    <div class="fav-title">Favorites</div>
     <button class="new-btn" onclick="openCompose()">✉ New Email</button>
     <button class="nav active" onclick="selectFolder('inbox',this)">📥 Inbox <span class="num" id="inboxCount">0</span></button>
-    <button class="nav" onclick="selectFolder('sent',this)">📤 Sent <span class="num" id="sentCount">0</span></button>
+    <button class="nav" onclick="selectFolder('sent',this)">📤 Sent Items <span class="num" id="sentCount">0</span></button>
     <button class="nav" onclick="selectFolder('important',this)">⭐ Important <span class="num" id="importantCount">0</span></button>
     <button class="nav" onclick="selectFolder('unread',this)">🔔 Unread <span class="num" id="unreadCount">0</span></button>
-    <button class="nav" onclick="selectFolder('trash',this)">🗑️ Trash</button>
+    <div class="section-label">My folders</div>
+    <button class="nav" onclick="selectFolder('trash',this)">🗑 Deleted Items</button>
+    <button class="nav">📦 Archive</button>
+    <button class="nav">💬 Conversation History</button>
+    <button class="nav">🚫 Junk Email</button>
+    <button class="nav">📤 Outbox</button>
+    <button class="nav">🔎 Search Folders</button>
+    <div class="section-label">Groups</div>
+    <button class="nav">👥 Groups</button>
     <div class="connect">
       <div id="status">Gmail is not connected yet.</div>
       <button class="gmail-btn" id="gmailButton">Connect Gmail</button>
@@ -113,22 +90,16 @@ button,input,textarea{font:inherit}button{cursor:pointer;border:0}
   </aside>
 
   <section class="listpane">
-    <div class="listhead"><h2 id="folderTitle">Inbox</h2><span id="listTotal" style="font-size:12px;color:#6b7280"></span><div class="mail-tools"><span class="count-pill">Sort: Date</span><button class="refresh" onclick="loadCurrentFolder()" title="Refresh">↻</button></div></div>
-    <div class="messages" id="mailList"><div class="empty">Connect Gmail to load your messages.</div></div><div class="load-footer"><button class="load-more" id="loadMoreBtn" onclick="loadCurrentFolder(false)">⬇ Load next 20 emails</button></div>
+    <div class="listhead"><h2 id="folderTitle">Inbox</h2><span id="listTotal" style="font-size:11px;color:#777"></span><div class="mail-tools"><span class="count-pill">By Date</span><button class="refresh" onclick="loadCurrentFolder(true)" title="Refresh">↻</button></div></div>
+    <div class="messages" id="mailList"><div class="empty">Connect Gmail to load your messages.</div></div>
+    <div class="load-footer"><button class="load-more" id="loadMoreBtn" onclick="loadCurrentFolder(false)">⬇ Load next 20 emails</button></div>
   </section>
 
   <section class="preview">
-    <div class="previewhead">
-      <h1 id="previewSubject">Select an email</h1>
-      <div class="meta"><strong id="previewSender">No message selected</strong><br><span id="previewTo"></span><br><span id="previewDate"></span></div>
-    </div>
-    <div class="actions">
-      <button onclick="replyCurrent()">↩ Reply</button>
-      <button onclick="forwardCurrent()">↪ Forward</button>
-      <button onclick="downloadCurrent()">⬇ Save</button>
-    </div>
-    <div class="body" id="messageBody">Your selected email will appear here.</div>
+    <div class="previewhead"><h1 id="previewSubject">Select an email</h1><div class="meta"><strong id="previewSender">No message selected</strong><br><span id="previewTo"></span><br><span id="previewDate"></span></div></div>
+    <div class="actions"><button onclick="replyCurrent()">↩ Reply</button><button onclick="forwardCurrent()">↪ Forward</button><button onclick="downloadCurrent()">⇩ Save</button></div>
     <div class="attachments" id="attachments"></div>
+    <div class="body" id="messageBody">Your selected email will appear here.</div>
   </section>
 </div>
 
